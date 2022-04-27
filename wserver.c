@@ -28,7 +28,7 @@ int main(){
 	}
 
 
-	if(!SSL_CTX_use_certificate_file(ctx, "localhost.pem" , SSL_FILETYPE_PEM) || !SSL_CTX_use_PrivateKey_file(ctx, "privatekey.pem", SSL_FILETYPE_PEM)){
+	if(!SSL_CTX_use_certificate_file(ctx, "server.pem" , SSL_FILETYPE_PEM) || !SSL_CTX_use_PrivateKey_file(ctx, "key.pem", SSL_FILETYPE_PEM)){
 		perror("SSL_CTX_use_certificate_file failed.\n");
 		ERR_print_errors_fp(stderr);
 		return -1;
@@ -53,7 +53,7 @@ int main(){
 	}
 
 	addr.sin_family = AF_INET;
-	addr.sin_port = htons(8080);
+	addr.sin_port = htons(443);
 	addr.sin_addr.s_addr = INADDR_ANY;
 
 	int retVal = bind( sockfd, (struct sockaddr*) &addr, sizeof(addr));
