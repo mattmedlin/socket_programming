@@ -1,11 +1,3 @@
-//Matt Medlin
-//Web Client
-
-//compile: gcc -Wall -o client client.c -L/usr/lib -lssl -lcrypto
-//run: ./client (address)
-//create a cert: openssl req -x509 -nodes -days 365 -newkey rsa:1024 -keyout mycert.pem -out mycert.pem
-
-
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <signal.h>
@@ -32,10 +24,10 @@ SSL_CTX* InitCTX(void)
 {
 	const SSL_METHOD *method;
 	SSL_CTX *ctx;
-	
+
 	OpenSSL_add_all_algorithms();
 	SSL_load_error_strings();
-	method = TLS_method();
+	method = TLS_client_method();
 	ctx = SSL_CTX_new(method);
 	if (ctx == NULL)
 	{
@@ -45,118 +37,83 @@ SSL_CTX* InitCTX(void)
 	return ctx;
 }
 
-void ShowCerts(SSL* ssl)
-{
-	X509 *cert;
-	char *line;
-	
-	cert = SSL_get_peer_certificate(ssl);
-	if ( cert != NULL)
-	{
-		printf("Server certificates:\n");
-		line = X509_NAME_oneline(X509_get_subject_name(cert), 0, 0);
-		printf("Subject: %s\n", line);
-		free(line);
-		line = X509_NAME_oneline(X509_get_issuer_name(cert), 0, 0);
-		printf("Issuer: %s\n", line);
-		free(line);
-		X509_free(cert);
-	}
-	else
-	{
-		printf("Info: No client certificates configured.\n");
-	}
-}
-
 int main(int argc, char **argv)
 {
 	SSL_CTX *ctx;
 	SSL *ssl;
-	char buf[1024];
-	int bytes;
-	
-	int sockfd, n;
+	char buf[MAX_bytes];
+	int sockfd;
 	int sendbytes;
 	struct sockaddr_in addr;
 	char sendline[MAX_bytes];
-	char recvline[MAX_bytes];
-	FILE *ptrFile = fopen("index.html", "w+");
-	
+
+	memset(buf,'\0',sizeof(buf));
+
 	if (argc != 2)
 	{
 		printf("Usage: ./client (address)\n");
 		return 0;
 	}
 	
+	//1. Determine IP from machine id
+	struct hostent* record = gethostbyname(argv[1]);
+	struct in_addr* address = (struct in_addr* )record->h_addr;
+	char* ip_address = inet_ntoa(*address);
+
 	SSL_library_init();
 	ctx = InitCTX();
-	
+
 	sockfd = socket(AF_INET, SOCK_STREAM, 0);
 	if (sockfd == -1)
 	{
 		perror("Could not create socket");
 		return -1;
 	}
-	
+
 	bzero(&addr, sizeof(addr));
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons(SERVER_PORT);
-	
-	int retVal = inet_pton(AF_INET, argv[1], &addr.sin_addr);
-	if (retVal == -1)
-	{
+
+	int retVal = inet_aton(ip_address, &(addr.sin_addr));
+	if (retVal == -1){
 		perror("Error: IP address not valid\n");
 		return -1;
 	}
-	
+
+
 	retVal = connect(sockfd, (SA *) &addr, sizeof(addr));
-	if (retVal == -1)
-	{
+	if (retVal == -1){
 		perror("Could not connect to server");
 		return -1;
 	}
-	
+
 	ssl = SSL_new(ctx);
 	SSL_set_fd(ssl, sockfd);
-	
+
 	retVal = SSL_connect(ssl);
-	if (retVal == -1)
-	{
+	if (retVal == -1){
 		ERR_print_errors_fp(stderr);
 	}
-	
+
 	sprintf(sendline, "GET / HTTP/1.1\r\n\r\n");
 	sendbytes = strlen(sendline);
-	
-	retVal = write(sockfd, sendline, sendbytes);
-	if (retVal == -1)
-	{
-		perror("Could not write");
-		return -1;
-	}
-	else
-	{
-		char *str = "Hello World!";
-		printf("Connected with %s encryption\n", SSL_get_cipher(ssl));
-		ShowCerts(ssl);
-		SSL_write(ssl, str, strlen(str));
-		bytes = SSL_read(ssl, buf, sizeof(buf));
-		buf[bytes] = 0;
-		printf("Received: \%s\"\n", buf);
-		while((n = read(sockfd, recvline, MAX_bytes-1)) > 0)
-		{
-			fprintf(ptrFile, recvline);
-			memset(recvline, 0, MAX_bytes);
+
+	SSL_write(ssl,sendline,sendbytes);
+
+	while(1){
+		int bytes_received = SSL_read(ssl,buf,sizeof(buf));
+		if(bytes_received < 1){
+			printf("Done reading.Close\n");
+			break;
 		}
-		
-		if (n < 0)
-		{
-			perror("Could not read");
-			return -1;
-		}
-		SSL_free(ssl);
+
+		printf("%s",buf);
 	}
+
+	SSL_shutdown(ssl);
 	close(sockfd);
+	SSL_free(ssl);
 	SSL_CTX_free(ctx);
+
 	return 0;
 }
