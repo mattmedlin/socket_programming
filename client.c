@@ -20,6 +20,10 @@
 #define MAX_bytes 4096
 #define SA struct sockaddr
 
+//compile: gcc -Wall -o client client.c -L/usr/lib -lssl -lcrypto
+//run: ./client (address)
+//create a cert: openssl req -x509 -nodes -days 365 -newkey rsa:1024 -keyout mycert.pem -out mycert.pem
+
 SSL_CTX* InitCTX(void)
 {
 	const SSL_METHOD *method;
