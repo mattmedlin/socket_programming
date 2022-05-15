@@ -7,4 +7,8 @@
 - To access the server, you need set the certificate (localhost.pem) as a trusted certificate on your computer (I don't really know how to set it up on Linux but you can find instructions somewhere on Google)
 - Refresh the browser and hopefully it works
 
-It works on my machine so I hope it can work on yours too    
+Client:
+
+compile: gcc -Wall -o client client.c -L/usr/lib -lssl -lcrypto
+run: ./client (url)
+create a cert: openssl req -x509 -nodes -days 365 -newkey rsa:1024 -keyout mycert.pem -out mycert.pem
