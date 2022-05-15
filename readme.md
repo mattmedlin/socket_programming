@@ -1,6 +1,8 @@
 Server:
 compile: gcc -Wall -g -L/opt/homebrew/opt/openssl@3/lib -I/opt/homebrew/opt/openssl@3/include -lssl -lcrypto -o wserver wserver.c 
+
 -L/pathToopenssl/openssl@3/lib -I/pathToopenssl/openssl@3/include -lssl -lcrypto -o wserver wserver.c 
+
 run: ./wserver
 On a web browser, search for https://localhost:443
 
